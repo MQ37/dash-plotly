@@ -33,7 +33,7 @@ def update_options(_):
     State('crypto-dropdown', 'options'),
 )
 def update_graph(value, options):
-    if value is None and options is None:
+    if value is None or options is None:
         return {}, True
     df = pd.read_csv(value)
 
