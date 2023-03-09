@@ -6,7 +6,7 @@ switch ($1)
         docker build -t mq37/dash-plotly-env ./workenv
     }
     "enter" {
-        docker run -it -v $(pwd):/home/lab/workdir --net=host --name workenv mq37/dash-plotly-env
+        docker run -it -v ${PWD}:/home/lab/workdir -p 8050:8050 --name workenv mq37/dash-plotly-env
     }
     "clean" {
         docker rm workenv
