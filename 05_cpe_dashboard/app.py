@@ -6,6 +6,8 @@ import dash_bootstrap_components as dbc
 from collections import deque
 from cpe import CPE
 
+from config import RSSI_BANDS, SINR_BANDS
+
 
 cpe = CPE()
 rssi_data = deque(maxlen=100)
@@ -39,7 +41,7 @@ app.layout = dbc.Container([
             ], justify='between'),
         ]),
         dbc.Tab(label="Neighbors", children=[
-            html.P("TODO: Add Neighbors tab content here...")
+            dcc.Graph(id='channels-chart', animate=True, style={'height': '80vh'}),
         ]),
     ]),
     dcc.Interval(
@@ -52,7 +54,8 @@ app.layout = dbc.Container([
 @app.callback([Output('rssi-chart', 'figure'),
                Output('sinr-chart', 'figure'),
                Output("wifi-score-chart", "figure"),
-               Output("n-clients-chart", "figure")
+               Output("n-clients-chart", "figure"),
+               Output("channels-chart", "figure")
                ],
               [Input('update-interval', 'n_intervals')],
               [State('auto-refresh', 'value')])
@@ -61,6 +64,8 @@ def update_charts(n, refresh):
     sinr = cpe.get_sinr()
     wifi_score = cpe.get_wifi_score()
     n_clients = cpe.get_n_clients()
+    channels = cpe.get_channels()
+    current_channel = cpe.get_current_channel()
 
     rssi_data.append(rssi)
     sinr_data.append(sinr)
@@ -68,25 +73,33 @@ def update_charts(n, refresh):
     if not refresh:
         return dash.no_update
 
+    # Plot RSSI data
     rssi_fig = go.Figure(
         data=[go.Scatter(x=list(range(len(rssi_data))), y=list(rssi_data), mode='lines+markers', hovertemplate='RSSI: %{y} dBm')],
         layout=go.Layout(title='RSSI Chart (dBm)', yaxis=dict(title='dBm', range=[-90, -30]))
     )
-    rssi_fig.add_shape(type='rect', xref='paper', x0=0, x1=1, yref='y', y0=-65, y1=-20, fillcolor='green', opacity=0.2)
-    rssi_fig.add_shape(type='rect', xref='paper', x0=0, x1=1, yref='y', y0=-75, y1=-65, fillcolor='yellow', opacity=0.2)
-    rssi_fig.add_shape(type='rect', xref='paper', x0=0, x1=1, yref='y', y0=-100, y1=-75, fillcolor='red', opacity=0.2)
+    # Add bands
+    for (ymin, ymax, color) in RSSI_BANDS:
+        rssi_fig.add_shape(type='rect', xref='paper', x0=0, x1=1, yref='y',
+                           y0=ymin, y1=ymax, fillcolor=color,
+                           opacity=0.2)
 
+    # Plot SINR data
     sinr_fig = go.Figure(
         data=[go.Scatter(x=list(range(len(sinr_data))), y=list(sinr_data), mode='lines+markers', hovertemplate='SINR: %{y} dB')],
         layout=go.Layout(title='SINR Chart (dB)', yaxis=dict(title='dB', range=[-10, 35]))
     )
-    sinr_fig.add_shape(type='rect', xref='paper', x0=0, x1=1, yref='y', y0=15, y1=50, fillcolor='green', opacity=0.2)
-    sinr_fig.add_shape(type='rect', xref='paper', x0=0, x1=1, yref='y', y0=5, y1=15, fillcolor='yellow', opacity=0.2)
-    sinr_fig.add_shape(type='rect', xref='paper', x0=0, x1=1, yref='y', y0=-50, y1=5, fillcolor='red', opacity=0.2)
+    # Add bands
+    for (ymin, ymax, color) in SINR_BANDS:
+        sinr_fig.add_shape(type='rect', xref='paper', x0=0, x1=1, yref='y',
+                           y0=ymin, y1=ymax, fillcolor=color,
+                           opacity=0.2)
 
+    # Zoom data
     rssi_fig.update_layout(xaxis_range=[0, len(rssi_data)-1])
     sinr_fig.update_layout(xaxis_range=[0, len(sinr_data)-1])
 
+    # Plot WiFi score
     wifi_score_fig = go.Figure(
             data=[go.Indicator(
                     mode="gauge+number",
@@ -96,6 +109,7 @@ def update_charts(n, refresh):
                     )]
             )
 
+    # Plot N clients
     n_clients_fig = go.Figure(
             data=[go.Indicator(
                     mode="number",
@@ -104,7 +118,43 @@ def update_charts(n, refresh):
                     )]
             )
 
-    return rssi_fig, sinr_fig, wifi_score_fig, n_clients_fig
+    # Plot channels
+    bars = []
+    for i, count in enumerate(channels):
+        bars.append(go.Bar(
+            x=[i+1],
+            y=[count],
+            name=f'Channel {i+1}',
+            marker={"color" : "#33cc33", "opacity": 0.8},
+            hovertext=f'{count} APs',
+            hoverinfo='text',
+            showlegend=False
+        ))
+
+    # Current channel
+    bars.append(go.Bar(
+        x=[current_channel],
+        y=[1],
+        marker={"color": "#0099ff"},
+        hovertext=f'Your CPEs AP',
+        hoverinfo='text',
+        showlegend=False
+    ))
+
+    layout = go.Layout(
+        title={"text" : 'WiFi neighbors 2.4 GHz', "x" : 0.5 },
+        xaxis=dict(title='Channel', tickvals=list(range(1, len(channels)+1)),
+                   ticktext=[f'{i+1}' for i in range(len(channels))]),
+        yaxis=dict(title='Number of APs'),
+        barmode='stack'
+    )
+
+    # update ylim
+    channels_fig = go.Figure(data=bars, layout=layout)
+    y_max = max(channels) * 1.2
+    channels_fig.update_yaxes(range=[0, y_max])
+
+    return rssi_fig, sinr_fig, wifi_score_fig, n_clients_fig, channels_fig
 
 
 
