@@ -51,54 +51,41 @@ app.layout = dbc.Container([
     )
 ], fluid=True)
 
-@app.callback([Output('rssi-chart', 'figure'),
-               Output('sinr-chart', 'figure'),
-               Output("wifi-score-chart", "figure"),
-               Output("n-clients-chart", "figure"),
-               Output("channels-chart", "figure")
-               ],
-              [Input('update-interval', 'n_intervals')],
-              [State('auto-refresh', 'value')])
-def update_charts(n, refresh):
-    rssi = cpe.get_rssi()
-    sinr = cpe.get_sinr()
-    wifi_score = cpe.get_wifi_score()
-    n_clients = cpe.get_n_clients()
-    channels = cpe.get_channels()
-    current_channel = cpe.get_current_channel()
-
-    rssi_data.append(rssi)
-    sinr_data.append(sinr)
-
-    if not refresh:
-        return dash.no_update
-
+def create_rssi_fig(rssi_data, rssi_bands):
     # Plot RSSI data
     rssi_fig = go.Figure(
         data=[go.Scatter(x=list(range(len(rssi_data))), y=list(rssi_data), mode='lines+markers', hovertemplate='RSSI: %{y} dBm')],
-        layout=go.Layout(title='RSSI Chart (dBm)', yaxis=dict(title='dBm', range=[-90, -30]))
+        layout=go.Layout(title='RSSI Chart (dBm)', yaxis={"title": 'dBm', "range": [-90, -40]})
     )
     # Add bands
-    for (ymin, ymax, color) in RSSI_BANDS:
+    for (ymin, ymax, color) in rssi_bands:
         rssi_fig.add_shape(type='rect', xref='paper', x0=0, x1=1, yref='y',
-                           y0=ymin, y1=ymax, fillcolor=color,
-                           opacity=0.2)
-
-    # Plot SINR data
-    sinr_fig = go.Figure(
-        data=[go.Scatter(x=list(range(len(sinr_data))), y=list(sinr_data), mode='lines+markers', hovertemplate='SINR: %{y} dB')],
-        layout=go.Layout(title='SINR Chart (dB)', yaxis=dict(title='dB', range=[-10, 35]))
-    )
-    # Add bands
-    for (ymin, ymax, color) in SINR_BANDS:
-        sinr_fig.add_shape(type='rect', xref='paper', x0=0, x1=1, yref='y',
                            y0=ymin, y1=ymax, fillcolor=color,
                            opacity=0.2)
 
     # Zoom data
     rssi_fig.update_layout(xaxis_range=[0, len(rssi_data)-1])
+
+    return rssi_fig
+
+def create_sinr_fig(sinr_data, sinr_bands):
+    # Plot SINR data
+    sinr_fig = go.Figure(
+        data=[go.Scatter(x=list(range(len(sinr_data))), y=list(sinr_data), mode='lines+markers', hovertemplate='SINR: %{y} dB')],
+        layout=go.Layout(title='SINR Chart (dB)', yaxis={'title': 'dB', 'range': [-10, 35]})
+    )
+    # Add bands
+    for (ymin, ymax, color) in sinr_bands:
+        sinr_fig.add_shape(type='rect', xref='paper', x0=0, x1=1, yref='y',
+                           y0=ymin, y1=ymax, fillcolor=color,
+                           opacity=0.2)
+
+    # Zoom data
     sinr_fig.update_layout(xaxis_range=[0, len(sinr_data)-1])
 
+    return sinr_fig
+
+def create_wifi_score_fig(wifi_score):
     # Plot WiFi score
     wifi_score_fig = go.Figure(
             data=[go.Indicator(
@@ -109,6 +96,10 @@ def update_charts(n, refresh):
                     )]
             )
 
+    return wifi_score_fig
+
+
+def create_n_clients_fig(n_clients):
     # Plot N clients
     n_clients_fig = go.Figure(
             data=[go.Indicator(
@@ -118,6 +109,9 @@ def update_charts(n, refresh):
                     )]
             )
 
+    return n_clients_fig
+
+def create_channels_fig(channels, current_channel):
     # Plot channels
     bars = []
     for i, count in enumerate(channels):
@@ -143,9 +137,12 @@ def update_charts(n, refresh):
 
     layout = go.Layout(
         title={"text" : 'WiFi neighbors 2.4 GHz', "x" : 0.5 },
-        xaxis=dict(title='Channel', tickvals=list(range(1, len(channels)+1)),
-                   ticktext=[f'{i+1}' for i in range(len(channels))]),
-        yaxis=dict(title='Number of APs'),
+        xaxis={
+            'title': 'Channel',
+            'tickvals': list(range(1, len(channels)+1)),
+            'ticktext': [f'{i+1}' for i in range(len(channels))]
+        },
+        yaxis={"title": 'Number of APs'},
         barmode='stack'
     )
 
@@ -153,6 +150,35 @@ def update_charts(n, refresh):
     channels_fig = go.Figure(data=bars, layout=layout)
     y_max = max(channels) * 1.2
     channels_fig.update_yaxes(range=[0, y_max])
+
+    return channels_fig
+
+@app.callback(Output('rssi-chart', 'figure'),
+               Output('sinr-chart', 'figure'),
+               Output("wifi-score-chart", "figure"),
+               Output("n-clients-chart", "figure"),
+               Output("channels-chart", "figure"),
+              Input('update-interval', 'n_intervals'),
+              State('auto-refresh', 'value'))
+def update_charts(n, refresh):
+    rssi = cpe.get_rssi()
+    sinr = cpe.get_sinr()
+    wifi_score = cpe.get_wifi_score()
+    n_clients = cpe.get_n_clients()
+    channels = cpe.get_channels()
+    current_channel = cpe.get_current_channel()
+
+    rssi_data.append(rssi)
+    sinr_data.append(sinr)
+
+    if not refresh:
+        return dash.no_update
+
+    rssi_fig = create_rssi_fig(rssi_data, RSSI_BANDS)
+    sinr_fig = create_sinr_fig(sinr_data, SINR_BANDS)
+    wifi_score_fig = create_wifi_score_fig(wifi_score)
+    n_clients_fig = create_n_clients_fig(n_clients)
+    channels_fig = create_channels_fig(channels, current_channel)
 
     return rssi_fig, sinr_fig, wifi_score_fig, n_clients_fig, channels_fig
 
