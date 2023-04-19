@@ -5,7 +5,7 @@ Project with simple Dash example apps for lecture about Dash/Plotly.
 ### How to install
 
 **GNU/Linux;Mac OS**
-- Close this repo
+- Clone this repo
     - `git clone https://github.com/MQ37/dash-plotly`
     - `cd dash-plotly`
 - Create and enter Python3 venv
@@ -15,7 +15,7 @@ Project with simple Dash example apps for lecture about Dash/Plotly.
     - `pip install -r requirements.txt`
 
 **MS Windows**
-- Close this repo
+- Clone this repo
     - `git clone https://github.com/MQ37/dash-plotly`
     - `cd dash-plotly`
 - Create and enter Python3 venv
