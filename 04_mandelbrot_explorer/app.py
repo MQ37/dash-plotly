@@ -30,8 +30,9 @@ def compute_mandelbrot_set(x_min, x_max, y_min, y_max, resolution,
             while abs(z) <= 2 and iterations < max_iterations:
                 z = z**2 + c
                 iterations += 1
-            if iterations == max_iterations:
-                points.add((x, y))
+            #if iterations == max_iterations:
+            #    points.add((x, y))
+            points.add((x, y, iterations))
     return points
 
 
@@ -44,7 +45,8 @@ app.layout = html.Div([
                    value=100,
                    marks={val: str(val)
                           for val in range(0, 1000 + 1, 100)},
-                   id="resolution"), "Max iterations",
+                   id="resolution"),
+        "Max iterations",
         dcc.Slider(1,
                    1000,
                    10,
@@ -79,10 +81,12 @@ def update_graph(_, selection, resolution, max_iter):
 
     points = compute_mandelbrot_set(x_min, x_max, y_min, y_max, resolution,
                                     max_iter)
-    x, y = zip(*points)
+    x, y, iterations = zip(*points)
     x = np.array(x)
     y = np.array(y)
-    fig = px.scatter(x=x, y=y, color=y * x, title="Mandelbrot set")
+    iterations = np.array(iterations)
+    color = iterations
+    fig = px.scatter(x=x, y=y, color=color, title="Mandelbrot set")
     fig.layout.width = 800
     fig.layout.height = 800
     fig.update_traces(marker={"size": 3000 * 1 / resolution})
