@@ -1,6 +1,16 @@
 import random
 
 class CPE:
+    """
+    Třída pro simulaci CPE zařízení.
+    Hodnoty:
+    - rssi: síla signálu
+    - sinr: signal to noise ratio
+    - n_clients: počet klientů připojených k CPE
+    - channels: počet klientů na jednotlivých kanálech
+    - channel: aktuální kanál
+    """
+
     def __init__(self):
         self.rssi : float = random.uniform(-70, -30)
         self.sinr : float = random.uniform(5, 25)

@@ -1,3 +1,4 @@
+# Jednotlivé barevné zóny v RSSI a SINR grafech
 RSSI_BANDS = [
                 (-100, -75, "red"),
                 (-76, -65, "yellow"),
